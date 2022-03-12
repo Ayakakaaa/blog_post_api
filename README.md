@@ -13,7 +13,7 @@ Used NET::HTTP to get api response (no need to add gem for that)
 * Configuration
 
 * How to run the test suite
-gem 'rspec-rails', '~> 5.0.0'
+Added gem 'rspec-rails', '~> 5.0.0' for test
 Running specs
 # Default: Run all spec files (i.e., those matching spec/**/*_spec.rb)
 $ bundle exec rspec
