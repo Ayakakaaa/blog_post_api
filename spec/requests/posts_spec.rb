@@ -1,52 +1,67 @@
 require 'rails_helper'
 
 RSpec.describe PostsController do
-  describe "Get posts without any params" do
+  describe "Get posts without any params -" do
     before do
       get api_posts_path
     end
-    it "fails without a tags param" do
+    it "fails with status 400 and error code" do
       expect(response).to have_http_status(400)
       expect(JSON.parse(response.body)["error"]).to eq("Tags parameter is required")
     end
   end
 
-  describe "Get posts with invalid sortBy param" do 
+  describe "Get posts with invalid sortBy param -" do 
     before do
       get api_posts_path, params: {sortBy: "rating", tags: "tech"}
     end
-    it "fails without an invalid sortBy param" do
+    it "fails with status 400 and error code" do
       expect(response).to have_http_status(400)
       expect(JSON.parse(response.body)["error"]).to eq("sortedBy parameter is invalid")
     end
   end
 
-  describe "Get posts with invalid direction param" do 
+  describe "Get posts with invalid direction param -" do 
     before do
       get api_posts_path, params: {direction: "sideways", tags: "tech"}
     end
-    it "fails without an invalid direction param" do
+    it "fails with status 400 and error code" do
       expect(response).to have_http_status(400)
       expect(JSON.parse(response.body)["error"]).to eq("direction parameter is invalid")
     end
   end
 
-  describe "Get posts with tags params" do 
+  describe "Get posts with only 'tech' tags param -" do 
     before do
       get api_posts_path, params: {tags: "tech"}
       @posts = JSON.parse(response.body)
     end
-    it "succees with tags param" do
+    it "returns success code and posts" do
       expect(response).to have_http_status(200)
       expect(@posts.count).to be > 0
     end
-    it "'tech' tags param only returns posts with selected tag" do
+    it "returns success code and only 'tech' posts" do
       expect(response).to have_http_status(200)
       @posts.each do |post|
         expect(post["tags"]).to include("tech")
       end
     end
-    it "posts are ordered by ascending id if no sortBy and direction parameters are sent" do
+    it "posts have required fields" do
+      expect(response).to have_http_status(200)
+
+      @posts.each do |post|
+        expect([
+          post["id"],
+          post["author"],
+          post["authorId"],
+          post["likes"],
+          post["popularity"],
+          post["reads"],
+          post["tags"],
+        ].all?(&:present?)).to eq(true)
+      end
+    end
+    it "posts are ordered by ascending id" do
       expect(response).to have_http_status(200)
 
       @posts.each_with_index do |post, index|
@@ -58,26 +73,26 @@ RSpec.describe PostsController do
     end
   end
 
-  describe "Get posts with multiple tags" do 
+  describe "Get posts with only multiple ('tech', 'health') tags -" do 
     before do
       get api_posts_path, params: {tags: "tech,health"}
       @posts = JSON.parse(response.body)
     end
-    it "succees with multips tags param" do
+    it "returns success code and posts" do
       expect(response).to have_http_status(200)
       expect(@posts.count).to be > 0
     end
-    it "'tech,health' tags param only returns posts with selected tags" do
+    it "returns success code and only 'tech' and 'health' posts" do
       expect(response).to have_http_status(200)
       @posts.each do |post|
         expect(post["tags"].include?("tech") || post["tags"].include?("health")).to be true
       end
     end
-    it "'tech,health' tags param doesn't return duplicate posts" do
+    it "no duplicate posts" do
       expect(response).to have_http_status(200)
       expect(@posts.count).to eq(@posts.uniq { |p| p["id"]}.count)
     end
-    it "posts are ordered by ascending id if no sortBy and direction parameters are sent" do
+    it "posts are ordered by ascending id" do
       expect(response).to have_http_status(200)
 
       @posts.each_with_index do |post, index|
@@ -89,12 +104,12 @@ RSpec.describe PostsController do
     end
   end
 
-  describe "Get posts with tags and sortBy params" do 
+  describe "Get posts with only tags and 'likes' sortBy params -" do 
     before do
       get api_posts_path, params: {sortBy: "likes", tags: "tech"}
       @posts = JSON.parse(response.body)
     end
-    it "posts are ordered by sortBy param - asc by default" do
+    it "posts are ordered by ascending likes" do
       expect(response).to have_http_status(200)
 
       @posts.each_with_index do |post, index|
@@ -106,12 +121,46 @@ RSpec.describe PostsController do
     end
   end
 
-  describe "Get posts with tags and direction params" do 
+  describe "Get posts with only tags and 'reads' sortBy params -" do 
+    before do
+      get api_posts_path, params: {sortBy: "reads", tags: "tech"}
+      @posts = JSON.parse(response.body)
+    end
+    it "posts are ordered by ascending reads" do
+      expect(response).to have_http_status(200)
+
+      @posts.each_with_index do |post, index|
+        if index < (@posts.count - 1)
+          nextPost = @posts[index + 1]
+          expect(nextPost["reads"]).to be >= post["reads"]
+        end
+      end
+    end
+  end
+
+  describe "Get posts with tags and 'popularity' sortBy params -" do 
+    before do
+      get api_posts_path, params: {sortBy: "popularity", tags: "tech"}
+      @posts = JSON.parse(response.body)
+    end
+    it "posts are ordered by ascending popularity" do
+      expect(response).to have_http_status(200)
+
+      @posts.each_with_index do |post, index|
+        if index < (@posts.count - 1)
+          nextPost = @posts[index + 1]
+          expect(nextPost["popularity"]).to be >= post["popularity"]
+        end
+      end
+    end
+  end
+
+  describe "Get posts with only tags and 'desc' direction params -" do 
     before do
       get api_posts_path, params: {direction: "desc", tags: "tech"}
       @posts = JSON.parse(response.body)
     end
-    it "posts are ordered by direction param - id by default" do
+    it "posts are ordered by descending id" do
       expect(response).to have_http_status(200)
 
       @posts.each_with_index do |post, index|
@@ -123,13 +172,13 @@ RSpec.describe PostsController do
     end
   end
 
-  describe "Get posts with tags, sortBy and direction params" do 
+  describe "Get posts with tags, 'likes' sortBy and 'desc' direction params -" do 
     before do
       get api_posts_path, params: {sortBy: "likes", direction: "desc", tags: "tech"}
       @posts = JSON.parse(response.body)
     end
 
-    it "posts are ordered by sortBy and direction params" do
+    it "posts are ordered by descending likes" do
       expect(response).to have_http_status(200)
 
       @posts.each_with_index do |post, index|
